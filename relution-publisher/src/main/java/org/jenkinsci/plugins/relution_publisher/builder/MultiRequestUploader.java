@@ -16,7 +16,6 @@
 
 package org.jenkinsci.plugins.relution_publisher.builder;
 
-import com.google.common.base.Stopwatch;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
@@ -444,18 +443,18 @@ public class MultiRequestUploader implements Uploader {
             throws InterruptedException {
 
         try {
-            final Stopwatch sw = new Stopwatch();
             final File file = new File(directory, fileName);
             final ApiRequest request = this.requestFactory.createUploadRequest(artifact.getStore(), file);
 
             this.log.write(this, "Uploading \"%s\" (%,d Byte)…", fileName, file.length());
 
-            sw.start();
+            long startTimeNanos = System.nanoTime();
             final ApiResponse response = this.network.execute(request, this.log);
-            sw.stop();
+            long finishTimeNanos = System.nanoTime();
+            long elapsedTimeMillis = TimeUnit.MILLISECONDS.convert(finishTimeNanos - startTimeNanos, TimeUnit.NANOSECONDS);
 
-            final String speed = this.getUploadSpeed(sw, file);
-            this.log.write(this, "Upload of file completed (%s, %s).", sw, speed);
+            final String speed = this.getUploadSpeed(elapsedTimeMillis, file);
+            this.log.write(this, "Upload of file completed (%d milliseconds, %s).", elapsedTimeMillis, speed);
 
             return this.extractAsset(artifact, response);
 
@@ -503,8 +502,8 @@ public class MultiRequestUploader implements Uploader {
         return asset;
     }
 
-    private String getUploadSpeed(final Stopwatch sw, final File file) {
-        final float milliseconds = sw.elapsedTime(TimeUnit.MILLISECONDS);
+    private String getUploadSpeed(final long elapsedTimeMillis, final File file) {
+        final float milliseconds = elapsedTimeMillis;
         final float seconds = milliseconds / 1000f;
 
         if (file.length() == 0 || seconds == 0) {

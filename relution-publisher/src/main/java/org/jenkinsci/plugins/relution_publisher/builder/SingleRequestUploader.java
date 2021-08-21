@@ -16,8 +16,6 @@
 
 package org.jenkinsci.plugins.relution_publisher.builder;
 
-import com.google.common.base.Stopwatch;
-
 import org.apache.commons.lang.StringUtils;
 import org.apache.tools.ant.DirectoryScanner;
 import org.apache.tools.ant.types.FileSet;
@@ -126,14 +124,13 @@ public class SingleRequestUploader implements Uploader {
             request.addItem("changelog", changelog);
         }
 
-        final Stopwatch sw = new Stopwatch();
-
-        sw.start();
+        long startTimeNanos = System.nanoTime();
         final ApiResponse response = this.network.execute(request, this.log);
-        sw.stop();
+        long finishTimeNanos = System.nanoTime();
+        long elapsedTimeMillis = TimeUnit.MILLISECONDS.convert(finishTimeNanos - startTimeNanos, TimeUnit.NANOSECONDS);
 
-        final String speed = this.getUploadSpeed(sw, request);
-        this.log.write(this, "Upload completed (%s, %s)", sw, speed);
+        final String speed = this.getUploadSpeed(elapsedTimeMillis, request);
+        this.log.write(this, "Upload completed (%s milliseconds, %s)", elapsedTimeMillis, speed);
 
         return response;
     }
@@ -241,8 +238,8 @@ public class SingleRequestUploader implements Uploader {
         return new File(scanner.getBasedir(), fileName);
     }
 
-    private String getUploadSpeed(final Stopwatch sw, final ZeroCopyFileRequest request) throws FileNotFoundException {
-        final float milliseconds = sw.elapsedTime(TimeUnit.MILLISECONDS);
+    private String getUploadSpeed(final long elapsedTimeMillis, final ZeroCopyFileRequest request) throws FileNotFoundException {
+        final float milliseconds = elapsedTimeMillis;
         final float seconds = milliseconds / 1000f;
 
         final long length = request.getContentLength();
